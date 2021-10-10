@@ -1,8 +1,12 @@
 package com.example.qr_code;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.hardware.input.InputManager;
 import android.os.Bundle;
@@ -17,13 +21,13 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 public class MainActivity extends AppCompatActivity {
 
-    EditText et_input;
-    Button btn_generate;
-    ImageView iv_output;
+    Button btn_scan;
 
 
     @Override
@@ -31,45 +35,73 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        et_input = findViewById(R.id.et_input);
-        btn_generate = findViewById(R.id.btn_generate);
-        iv_output = findViewById(R.id.iv_output);
+        btn_scan = findViewById(R.id.btn_scan);
 
-        btn_generate.setOnClickListener(v -> {
-            //get inputs from edit text
-            String sText = et_input.getText().toString().trim();
-            if(sText.equals("")){
-                Toast.makeText(getApplicationContext()  , "Input cannot be empty", Toast.LENGTH_SHORT).show();
-            }else {
+        btn_scan.setOnClickListener(v -> {
+            //Initialize intentIntegrator
+            IntentIntegrator intentIntegrator = new IntentIntegrator(MainActivity.this);
 
-                //initialize MultiFormatWriter
-                MultiFormatWriter multiFormatWriter = new MultiFormatWriter();
-                //initialize bitMatrix, in encode surround with try catch
-                try {
-                    BitMatrix bitMatrix = multiFormatWriter.encode(sText, BarcodeFormat.QR_CODE, 500, 500);
+            //set promp text
+            intentIntegrator.setPrompt("For Flash use volume up key");
 
-                    //initialize barcode encoder
-                    BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
+            //set beep
+            intentIntegrator.setBeepEnabled(true);
 
-                    //initialize bitmap
-                    Bitmap bitmap = barcodeEncoder.createBitmap(bitMatrix);
+            //locked orientation
+            intentIntegrator.setOrientationLocked(true);
 
-                    //set Bitmap on imageView
-                    iv_output.setImageBitmap(bitmap);
+            //set capture activity
+            intentIntegrator.setCaptureActivity(Capture.class);
 
-                    //initialize input manager
-                    InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(
-                            Context.INPUT_METHOD_SERVICE
-                    );
-
-                    //hide soft keyboard
-                    inputMethodManager.hideSoftInputFromWindow(et_input.getApplicationWindowToken(), 0);
-                } catch (WriterException e) {
-                    e.printStackTrace();
-                }
-            }
+            //initiate scan
+            intentIntegrator.initiateScan();
         });
 
     }
 
+    //still on bar code scan
+
+//oar
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+
+        //initiate intent result
+        IntentResult intentResult = IntentIntegrator.parseActivityResult(resultCode,data);
+
+        //check condition
+        //Todo: still not getting correct response if null
+        if(intentResult.getContents() != null){
+            //when result is not null
+            //initiate alert dialog
+            String result = intentResult.getContents();
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            //set title
+            builder.setTitle("Results");
+
+            //set message
+            builder.setMessage(intentResult.getContents());
+
+            if(result.equals("")){
+                Toast.makeText(getApplicationContext(), "Alaa no result", Toast.LENGTH_SHORT).show();
+            }else {
+                Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
+            }
+
+            //set positive btn
+            builder.setPositiveButton("OK", (dialog, which) -> {
+                //dismiss Dialog
+                dialog.dismiss();
+            });
+            //show alert dialog
+            builder.show();
+        }else{
+            //when result is null
+            //display Toast
+            Toast.makeText(getApplicationContext(), "OPPS...You did not scan anything", Toast.LENGTH_SHORT).show();
+        }
+    }
 }
